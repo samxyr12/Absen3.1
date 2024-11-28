@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <title>Laporan Absensi Lengkap</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 20px auto;
+            padding: 30px;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .report-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            font-weight: bold;
+            color: #555;
+        }
+        .filter-group input, 
+        .filter-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .btn-export {
+            background-color: #e74c3c;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .report-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card h3 {
+            margin: 0 0 10px;
+            color: #555;
+            font-size: 16px;
+        }
+        .summary-card p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .report-table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #reportTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #reportTable th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        #reportTable th, 
+        #reportTable td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        #reportTable tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #reportTable tr:hover {
+            background-color: #f1f1f1;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .status-late {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-ontime {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Laporan Absensi Lengkap</h1>
+        
+        <div class="report-filters">
+            <div class="filter-group">
+                <label>Rentang Tanggal</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="startDate">
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label>Filter Berdasarkan</label>
+                <select id="filterType">
+                    <option value="all">Semua Data</option>
+                    <option value="checkin">Check In</option>
+                    <option value="checkout">Check Out</option>
+                    <option value="late">Terlambat</option>
+                    <option value="ontime">Tepat Waktu</option>
+                </select>
+            </div>
+            
+            <div class="filter-actions">
+                <button id="applyFilter" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Terapkan Filter
+                </button>
+                <button id="resetFilter" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+                <button id="exportReport" class="btn btn-export">
+                    <i class="fas fa-file-excel"></i> Ekspor Laporan
+                </button>
+            </div>
+        </div>
+        
+        <div class="report-summary">
+            <div class="summary-card">
+                <h3>Total Karyawan</h3>
+                <p id="totalEmployees">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>Total Check In</h3>
+                <p id="totalCheckIns">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>Total Check Out</h3>
+                <p id="totalCheckOuts">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>Rata-rata Kehadiran</h3>
+                <p id="averageAttendance">0%</p>
+            </div>
+        </div>
+        
+        <div class="report-table-container">
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>KTP</th>
+                        <th>Nama</th>
+                        <th>Tanggal</th>
+                        <th>Mode</th>
+                        <th>Waktu</th>
+                        <th>Status</th>
+                        <th>Lokasi</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                                    </tbody>
+            </table>
+        </div>
+        
+        <div class="pagination">
+            <button id="prevPage" class="btn">
+                <i class="fas fa-chevron-left"></i> Sebelumnya
+            </button>
+            <span id="pageInfo">Halaman 1 dari 1</span>
+            <button id="nextPage" class="btn">
+                Selanjutnya <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+    // Konfigurasi Local Storage
+    // Konfigurasi Local Storage
+const LocalStorage = {
+    keys: {
+        attendance: 'attendance_data'
+    },
+    getAttendance() {
+        return JSON.parse(localStorage.getItem(this.keys.attendance)) || {};
+    }
+};
+
+// Variabel Global
+let currentPage = 1;
+const itemsPerPage = 10;
+let filteredData = [];
+
+// Fungsi untuk memuat dan memproses data laporan
+function loadReportData(filters = {}) {
+    const attendance = LocalStorage.getAttendance();
+    filteredData = [];
+
+    // Proses data absensi
+    Object.entries(attendance).forEach(([ktp, userAttendance]) => {
+        Object.entries(userAttendance).forEach(([date, dayAttendance]) => {
+            // Filter berdasarkan rentang tanggal
+            const currentDate = new Date(date);
+            const startDate = filters.startDate ? new Date(filters.startDate) : null;
+            const endDate = filters.endDate ? new Date(filters.endDate) : null;
+
+            if (startDate && currentDate < startDate) return;
+            if (endDate && currentDate > endDate) return;
+
+            // Proses check-in
+            if (dayAttendance.checkIn) {
+                const checkInData = {
+                    ktp,
+                    name: dayAttendance.checkIn.name,
+                    date,
+                    mode: 'Check In',
+                    timestamp: dayAttendance.checkIn.timestamp,
+                    status: dayAttendance.checkIn.isLate ? 'Terlambat' : 'Tepat Waktu',
+                    location: dayAttendance.checkIn.location
+                };
+
+                // Filter tambahan
+                if (shouldIncludeItem(checkInData, filters)) {
+                    filteredData.push(checkInData);
+                }
+            }
+
+            // Proses check-out
+            if (dayAttendance.checkOut) {
+                const checkOutData = {
+                    ktp,
+                    name: dayAttendance.checkOut.name,
+                    date,
+                    mode: 'Check Out',
+                    timestamp: dayAttendance.checkOut.timestamp,
+                    status: dayAttendance.checkOut.isOvertime ? 'Lembur' : 'Normal',
+                    location: dayAttendance.checkOut.location
+                };
+
+                // Filter tambahan
+                if (shouldIncludeItem(checkOutData, filters)) {
+                    filteredData.push(checkOutData);
+                }
+            }
+        });
+    });
+
+    // Urutkan data berdasarkan timestamp
+    filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Perbarui tampilan
+    updateReportSummary(filteredData);
+    displayReportData();
+}
+
+// Fungsi untuk menentukan apakah item harus ditampilkan
+function shouldIncludeItem(item, filters) {
+    // Filter berdasarkan tipe
+    if (filters.filterType) {
+        switch (filters.filterType) {
+            case 'checkin':
+                return item.mode === 'Check In';
+            case 'checkout':
+                return item.mode === 'Check Out';
+            case 'late':
+                return item.status === 'Terlambat';
+            case 'ontime':
+                return item.status === 'Tepat Waktu';
+        }
+    }
+    return true;
+}
+
+// Fungsi untuk menampilkan data laporan
+function displayReportData() {
+    const tableBody = document.getElementById('reportTableBody');
+    tableBody.innerHTML = '';
+
+    // Hitung rentang data untuk halaman saat ini
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = filteredData.slice(startIndex, endIndex);
+
+    // Buat baris tabel
+    pageData.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${startIndex + index + 1}</td>
+            <td>${item.ktp}</td>
+            <td>${item.name}</td>
+            <td>${item.date}</td>
+            <td>${item.mode}</td>
+            <td>${new Date(item.timestamp).toLocaleString()}</td>
+            <td class="status-${item.status.toLowerCase().replace(' ', '-')}">
+                ${item.status}
+            </td>
+            <td>${item.location}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    // Perbarui informasi halaman
+    updatePagination();
+}
+
+// Fungsi untuk memperbarui ringkasan laporan
+function updateReportSummary(data) {
+    const uniqueEmployees = new Set(data.map(item => item.ktp)).size;
+    const checkIns = data.filter(item => item.mode === 'Check In').length;
+    const checkOuts = data.filter(item => item.mode === 'Check Out').length;
+    const averageAttendance = uniqueEmployees > 0 
+        ? (checkIns / uniqueEmployees) * 100 
+        : 0;
+
+    document.getElementById('totalEmployees').textContent = uniqueEmployees;
+    document.getElementById('totalCheckIns').textContent = checkIns;
+    document.getElementById('totalCheckOuts').textContent = checkOuts;
+    document.getElementById('averageAttendance').textContent = 
+        averageAttendance.toFixed(2) + '%';
+}
+
+// Fungsi untuk memperbarui navigasi halaman
+function updatePagination() {
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    document.getElementById('pageInfo').textContent = 
+        `Halaman ${currentPage} dari ${totalPages}`;
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === totalPages;
+}
+
+// Fungsi untuk menerapkan filter
+document.getElementById('applyFilter').addEventListener('click', () => {
+    const filters = {
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        filterType: document.getElementById('filterType').value
+    };
+    loadReportData(filters);
+});
+
+// Fungsi untuk mereset filter
+document.getElementById('resetFilter').addEventListener('click', () => {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    document.getElementById('filterType').value = 'all';
+    loadReportData();
+});
+
+// Fungsi untuk ekspor laporan ke Excel
+document.getElementById('exportReport').addEventListener('click', () => {
+    const table = document.getElementById('reportTable');
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "Laporan Absensi" });
+    XLSX.writeFile(workbook, 'Laporan_Absensi.xlsx');
+    Swal.fire('Berhasil!', 'Laporan telah diekspor ke Excel', 'success');
+});
+
+// Fungsi untuk navigasi halaman sebelumnya
+document.getElementById('prevPage').addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        displayReportData();
+    }
+});
+
+// Fungsi untuk navigasi halaman selanjutnya
+document.getElementById('nextPage').addEventListener('click', () => {
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayReportData();
+    }
+});
+
+// Muat data laporan saat halaman dimuat
+window.addEventListener('load', () => {
+    loadReportData();
+});
+    </script>
+</body>
+</html>

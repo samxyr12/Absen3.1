@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Absensi</title>
+    <style>
+     :root {
+    /* Color Palette */
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #2ecc71;
+    --background-color: #f4f6f7;
+    --text-color: #34495e;
+    --border-color: #bdc3c7;
+    --error-color: #e74c3c;
+    --success-color: #27ae60;
+
+    /* Typography */
+    --font-primary: 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --font-size-base: 16px;
+    --font-size-small: 14px;
+    --font-size-large: 18px;
+
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+
+    /* Effects */
+    --border-radius: 10px;
+    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease-in-out;
+}
+
+/* Modern CSS Reset */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-primary);
+    line-height: 1.6;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.container {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: 100%;
+    padding: var(--spacing-lg);
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+    text-align: center;
+    color: var(--secondary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 2.5rem;
+    position: relative;
+    font-weight: 600;
+}
+
+h1::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+    position: relative;
+}
+
+input, select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    transition: var(--transition);
+    outline: none;
+}
+
+input:focus, select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.validation-icon {
+    position: absolute;
+    right: var(--spacing-sm);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+}
+
+.error-message {
+    color: var(--error-color);
+    font-size: var(--font-size-small);
+    margin-top: var(--spacing-xs);
+    display: none;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    margin-top: var(--spacing-sm);
+}
+
+button:hover {
+    background-color: color-mix(in srgb, var(--primary-color) 90%, black);
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.preview-container {
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+}
+
+.preview-data {
+    background-color: white;
+    margin: var(--spacing-xs) 0;
+    padding: var(--spacing-sm);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#qrCode {
+    display: flex;
+    justify-content: center;
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-sm);
+    background-color: #f1f3f5;
+    border-radius: var(--border-radius);
+}
+
+.tooltip {
+    position: relative;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: var(--secondary-color);
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    padding: var(--spacing-xs);
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md);
+        margin: 0 var(--spacing-sm);
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    input, select, button {
+        font-size: var(--font-size-small);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    body {
+        padding: var(--spacing-sm);
+    }
+
+    .container {
+        padding: var(--spacing-sm);
+    }
+
+    h1 {
+        font-size: 1.75rem;
+    }
+}
+
+/* Animation Keyframes */
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.success-animation {
+    animation: successPulse 1s ease-in-out;
+}
+
+/* Loading Spinner */
+.loading {
+    text-align: center;
+    margin: var(--spacing-sm) 0;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buat QR Code Absensi</h1>
+        <form id="qrForm">            
+            <div class="form-group">
+                <input type="text" id="name" placeholder="Nama Lengkap" required>
+                <span class="validation-icon"></span>
+                <div class="error-message">Nama harus diisi</div>
+            </div>
+
+            <div class="form-group">
+                <input type="date" id="birthdate" required>
+                <div class="error-message">Tanggal lahir harus diisi</div>
+            </div>
+
+            <div class="form-group">
+                <select id="gender" require >
+                    <option value="">Pilih Jenis Kelamin</option>
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                </select>
+                <div class="error-message">Jenis kelamin harus diisi</div>
+            </div>
+
+            <div class="form-group">
+                <input type="text" id="religion" placeholder="Agama" required>
+                <div class="error-message">Agama harus diisi</div>
+            </div>
+
+            <div class="form-group">
+                <input type="text" id="address" placeholder="Alamat" required>
+                <div class="error-message">Alamat harus diisi</div>
+            </div>
+
+            <div class="form-group tooltip">
+                <input type="text" id="ktp" placeholder="No KTP" required>
+                <span class="tooltiptext">Masukkan 16 digit nomor KTP</span>
+                <span class="validation-icon"></span>
+                <div class="error-message">No KTP harus diisi dan valid</div>
+            </div>
+
+            <div class="form-group">
+                <input type="text" id="phone" placeholder="Nomor Telepon" required>
+                <span class="validation-icon"></span>
+                <div class="error-message">Nomor telepon harus diisi dan valid</div>
+            </div>
+
+            <div class="form-group">
+                <input type="email" id="email" placeholder="Email" required>
+                <span class="validation-icon"></span>
+                <div class="error-message">Email harus diisi dan valid</div>
+            </div>
+
+            <button type="submit">Buat QR Code</button>
+        </form>
+
+        <div class="preview-container" id="previewContainer">
+            <h3>Preview Data:</h3>
+            <div id="previewData"></div>
+        </div>
+
+        <div id="qrCode" class="qr-code"></div>
+        <p id="message"></p>
+        <button id="downloadLink">Download QR Code</button>
+        <a href="index.html" id="goToAbsen">Ke Halaman Absensi</a>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+        <script>
+            function validateKTP(ktp) {
+                return /^\d{16}$/.test(ktp);
+            }
+
+            function validatePhone(phone) {
+                return /^(\+62|62|0)[0-9]{9,12}$/.test(phone);
+            }
+
+            function validateEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+
+            function showValidationResult(element, isValid) {
+                const icon = element.nextElementSibling;
+                icon.innerHTML = isValid ? '✓' : '✗';
+                icon.style.color = isValid ? 'green' : 'red';
+            }
+
+            document.getElementById('ktp').addEventListener('input', function(e) {
+                const isValid = validateKTP(e.target.value);
+                showValidationResult(this, isValid);
+            });
+
+            document.getElementById('phone').addEventListener('input', function(e) {
+                const isValid = validatePhone(e.target.value);
+                showValidationResult(this, isValid);
+            });
+
+            document.getElementById('email').addEventListener('input', function(e) {
+                const isValid = validateEmail(e.target.value);
+                showValidationResult(this, isValid);
+            });
+
+            function showPreview(formData) {
+                const previewContainer = document.getElementById('previewContainer');
+                const previewData = document.getElementById('previewData');
+                previewData.innerHTML = '';
+
+                for (const [key, value] of Object.entries(formData)) {
+                    const div = document.createElement('div');
+                    div.className = 'preview-data';
+                    div.innerHTML = `<strong>${key}:</strong> ${value}`;
+                    previewData.appendChild(div);
+                }
+
+                previewContainer.style.display = 'block';
+            }
+
+            document.getElementById('qrForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    name: document.getElementById('name').value,
+                    birthdate: document.getElementById('birthdate').value,
+                    gender: document.getElementById('gender').value,
+                    religion: document.getElementById('religion').value,
+                    address: document.getElementById('address').value,
+                    ktp: document.getElementById('ktp').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value
+                };
+
+                if (!validateKTP(formData.ktp)) {
+                    alert('Nomor KTP tidak valid!');
+                    return;
+                }
+                if (!validatePhone(formData.phone)) {
+                    alert('Nomor telepon tidak valid!');
+                    return;
+                }
+                if (!validateEmail(formData.email)) {
+ alert('Email tidak valid!');
+                    return;
+                }
+
+                showPreview(formData);
+                const message = createQRCode(
+                    formData.name, formData.birthdate, formData.gender,
+                    formData.religion, formData.address, formData.ktp,
+                    formData.phone, formData.email
+                );
+
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = message;
+                messageElement.classList.add('success-animation');
+
+                document.getElementById('goToAbsen').style.display = 'block';
+            });
+
+            function createQRCode(name, birthdate, gender, religion, address, ktp, phone, email) {
+                const uniqueID = btoa(`${name}-${ktp}-${new Date().getTime()}`);
+                const qrData = JSON.stringify({ name, birthdate, gender, religion, address, ktp, phone, email, uniqueID });
+
+                localStorage.setItem(ktp, qrData);
+
+                const qrCodeDiv = document.getElementById('qrCode');
+                qrCodeDiv.innerHTML = ''; // Kosongkan elemen sebelum menambah QR baru
+
+                new QRCode(qrCodeDiv, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                });
+
+                const downloadButton = document.getElementById('downloadLink');
+                downloadButton.style.display = 'block'; // Tampilkan tombol
+                downloadButton.onclick = function() {
+                    generateStyledQRCode(name, ktp, uniqueID); // Fungsi untuk mengunduh QR dengan style
+                };
+            }
+
+            function generateStyledQRCode(name, ktp, uniqueID) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const qrCodeDiv = document.getElementById('qrCode');
+                const qrCanvas = qrCodeDiv.querySelector('canvas');
+
+                if (!qrCanvas) {
+                    console.error("QR Canvas is not available.");
+                    return;
+                }
+
+                const qrSize = 250; // Ukuran QR Code di layar
+                const margin = 20; // Margin di sekitar QR Code
+                const borderRadius = 30; // Border radius untuk tampilan lebih keren
+                const scaleFactor = 4; // Scale factor untuk resolusi HD (4x ukuran asli)
+
+                const width = (qrSize + margin * 2) * scaleFactor;
+                const height = (qrSize + margin * 2) * scaleFactor;
+
+                canvas.width = width;
+                canvas.height = height;
+
+                ctx.scale(scaleFactor, scaleFactor);
+
+                ctx.fillStyle = '#ffffff'; // Background putih
+                ctx.beginPath();
+                ctx.moveTo(borderRadius, 0);
+                ctx.lineTo((qrSize + margin * 2) - borderRadius, 0);
+                ctx.quadraticCurveTo((qrSize + margin * 2), 0, (qrSize + margin * 2), borderRadius);
+                ctx.lineTo((qrSize + margin * 2), (qrSize + margin * 2) - borderRadius);
+                ctx.quadraticCurveTo((qrSize + margin * 2), (qrSize + margin * 2), (qrSize + margin * 2) - borderRadius, (qrSize + margin * 2));
+                ctx.lineTo(borderRadius, (qrSize + margin * 2));
+                ctx.quadraticCurveTo(0, (qrSize + margin * 2), 0, (qrSize + margin * 2) - borderRadius);
+                ctx.lineTo(0, borderRadius);
+                ctx.quadraticCurveTo(0, 0, borderRadius, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 5;
+
+                ctx.drawImage(qrCanvas, margin, margin, qrSize, qrSize);
+
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.onclick = function() {
+                    const imgData = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = imgData;
+                    a.download = `QRCode_HD.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+            }
+           
+            
+            
+        </script>
+    </div>
+</body>
+</html>

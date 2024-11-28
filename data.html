@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Peserta QR Code</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#60a5fa',
+                            DEFAULT: '#3b82f6',
+                            dark: '#2563eb'
+                        },
+                        danger: {
+                            light: '#ef4444',
+                            DEFAULT: '#dc2626',
+                            dark: '#b91c1c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Data Peserta QR Code</h1>
+        
+        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Cari berdasarkan nama, KTP, atau email" 
+                    class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                <div class="flex space-x-2">
+                    <button 
+                        onclick="exportToExcel()" 
+                        class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
+                    >
+                        Export Excel
+                    </button>
+                    <button 
+                        onclick="downloadAllQRCodes()" 
+                        class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                    >
+                        Download Semua QR Code
+                    </button>
+                    <button 
+                        onclick="clearAllData()" 
+                        class="px-4 py-2 bg-danger text-white rounded-md hover:bg-danger-dark transition-colors"
+                    >
+                        Hapus Semua Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+            <table class="w-full" id="dataTable">
+                <thead class="bg-gray-100 border-b">
+                    <tr>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Lahir</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Kelamin</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agama</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alamat</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No KTP</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No Telepon</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th class="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="dataBody" class="divide-y divide-gray-200">
+                    <!-- Data akan dimasukkan di sini oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div 
+        id="qrModal" 
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden"
+    >
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            <h2 class="text-2xl font-bold mb-4 text-center">QR Code Peserta</h2>
+            <div id="qrCodeContainer" class="flex justify-center mb-4"></div>
+            <div class="flex justify-center">
+                <button 
+                    onclick="closeModal()" 
+                    class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
+                >
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // All previous JavaScript functions remain the same, just update the styling classes
+
+        function loadData() {
+            const dataBody = document.getElementById('dataBody');
+            dataBody.innerHTML = ''; // Clear existing rows
+
+            Object.keys(localStorage).forEach(key => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    
+                    if (data.name && data.ktp) {
+                        const row = document.createElement('tr');
+                        row.classList.add('hover:bg-gray-50');
+                        row.innerHTML = `
+                            <td class="p-4 whitespace-nowrap">${data.name}</td>
+                            <td class="p-4 whitespace-nowrap">${data.birthdate}</td>
+                            <td class="p-4 whitespace-nowrap">${data.gender}</td>
+                            <td class="p-4 whitespace-nowrap">${data.religion}</td>
+                            <td class="p-4 whitespace-nowrap">${data.address}</td>
+                            <td class="p-4 whitespace-nowrap">${data.ktp}</td>
+                            <td class="p-4 whitespace-nowrap">${data.phone}</td>
+                            <td class="p-4 whitespace-nowrap">${data.email}</td>
+                            <td class="p-4 whitespace-nowrap flex space-x-2">
+                                <button onclick="showQRCode('${key}')" class="px-2 py-1 bg-primary text-white rounded-md text-xs hover:bg-primary-dark">Lihat QR</button>
+                                <button onclick="downloadIndividualQRCode('${key}')" class="px-2 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600">Download QR</button>
+                                <button onclick="deleteEntry('${key}')" class="px-2 py-1 bg-danger text-white rounded-md text-xs hover:bg-danger-dark">Hapus</button>
+                            </td>
+                        `;
+                        dataBody.appendChild(row);
+                    }
+                } catch (error) {
+                    console.error('Error parsing localStorage item:', error);
+                }
+            });
+        }
+
+        // Rest of the functions remain the same as in the previous version
+        function showQRCode(key) {
+            const data = JSON.parse(localStorage.getItem(key));
+            const qrCodeContainer = document.getElementById('qrCodeContainer');
+            const qr = qrcode(0, 'H');
+            qr.addData(JSON.stringify(data));
+            qr.make();
+            qrCodeContainer.innerHTML = qr.createImgTag(5);
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function downloadIndividualQRCode(key) {
+            const data = JSON.parse(localStorage.getItem(key));
+            const qr = qrcode(0, 'H');
+            qr.addData(JSON.stringify(data));
+            qr.make();
+            
+            const img = qr.createImgTag(5);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = img.match(/src="([^"]+)"/)[1];
+            downloadLink.download = `QR_${data.name.replace(/\s+/g, '_')}.png`;
+            downloadLink.click();
+        }
+
+        function downloadAllQRCodes() {
+            const zip = new JSZip();
+            const qrCodesFolder = zip.folder("QR_Codes");
+
+            Object.keys(localStorage).forEach(key => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    
+                    if (data.name && data.ktp) {
+                        const qr = qrcode(0, 'H');
+                        qr.addData(JSON.stringify(data));
+                        qr.make();
+                        
+                        const imgData = qr.createImgTag(5).match(/src="([^"]+)"/)[1];
+                        const filename = `QR_${data.name.replace(/\s+/g, '_')}.png`;
+                        
+                        const byteCharacters = atob(imgData.split(',')[1]);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], {type: 'image/png'});
+                        
+                        qrCodesFolder.file(filename, blob);
+                    }
+                } catch (error) {
+                    console.error('Error processing QR code:', error);
+                }
+            });
+
+            zip.generateAsync({type:"blob"}).then(function(content) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = 'QR_Codes.zip';
+                link.click();
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+
+        function deleteEntry(key) {
+            if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+                localStorage.removeItem(key);
+                loadData();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA data?')) {
+                Object.keys(localStorage).forEach(key => {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data.name && data.ktp) {
+                            localStorage.removeItem(key);
+                        }
+                    } catch (error) {}
+                });
+                loadData();
+            }
+        }
+
+        function exportToExcel() {
+            const data = [];
+            const headers = ['Nama', 'Tanggal Lahir', 'Jenis Kelamin', 'Agama', 'Alamat', 'No KTP', 'No Telepon', 'Email'];
+
+            Object.keys(localStorage).forEach(key => {
+                try {
+                    const entry = JSON.parse(localStorage.getItem(key));
+                    
+                    if (entry.name && entry.ktp) {
+                        data.push([
+                            entry.name, 
+                            entry.birthdate, 
+                            entry.gender, 
+                            entry.religion, 
+                            entry.address, 
+                            entry.ktp, 
+                            entry.phone, 
+                            entry.email
+                        ]);
+                    }
+                } catch (error) {
+                    console.error('Error parsing localStorage item:', error);
+                }
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Peserta");
+            XLSX.writeFile(workbook, "peserta_qr_code.xlsx");
+        }
+
+        function searchData() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#dataTable tbody tr');
+
+            rows.forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                const matchFound = Array.from(cells).some(cell => 
+                    cell.textContent.toLowerCase().includes(searchInput)
+                );
+
+                row.style.display = matchFound ? '' : 'none';
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', searchData);
+        window.onload = loadData;
+    </script>
+</body>
+</html>
